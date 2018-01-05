@@ -76,6 +76,14 @@ double getAvail(Parameters& params, std::string currency)
   {
     returnedText = json_string_value(json_object_get(root.get(), "usd_balance"));
   }
+  else if (currency == "eur")
+  {
+    returnedText = json_string_value(json_object_get(root.get(), "eur_balance"));
+  }
+  else if (currency == "xrp")
+  {
+    returnedText = json_string_value(json_object_get(root.get(), "xrp_balance"));
+  }
   if (returnedText != NULL)
   {
     availability = atof(returnedText);
@@ -122,7 +130,7 @@ bool isOrderComplete(Parameters& params, std::string orderId)
   return status && status == std::string("Finished");
 }
 
-double getActivePos(Parameters& params) { return getAvail(params, "btc"); }
+double getActivePos(Parameters& params, std::string currency) { return getAvail(params, currency); }
 
 double getLimitPrice(Parameters& params, double volume, bool isBid)
 {

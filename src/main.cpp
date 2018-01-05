@@ -37,7 +37,7 @@ typedef quote_t (*getQuoteType) (Parameters& params);
 typedef double (*getAvailType) (Parameters& params, std::string currency);
 typedef std::string (*sendOrderType) (Parameters& params, std::string direction, double quantity, double price);
 typedef bool (*isOrderCompleteType) (Parameters& params, std::string orderId);
-typedef double (*getActivePosType) (Parameters& params);
+typedef double (*getActivePosType) (Parameters& params, std::string currency);
 typedef double (*getLimitPriceType) (Parameters& params, double volume, bool isBid);
 
 
@@ -597,7 +597,7 @@ int main(int argc, char** argv) {
         // We check the current leg1 exposure
         std::vector<double> btcUsed(numExch);
         for (int i = 0; i < numExch; ++i) {
-          btcUsed[i] = getActivePos[i](params);
+          btcUsed[i] = getActivePos[i](params, 'btc');
         }
         // Checks the volumes and computes the limit prices that will be sent to the exchanges
         double volumeLong = btcUsed[res.idExchLong];
