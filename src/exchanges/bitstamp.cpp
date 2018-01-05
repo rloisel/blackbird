@@ -41,10 +41,10 @@ static json_t* checkResponse(std::ostream &logFile, json_t *root)
   return root;
 }
 
-quote_t getQuote(Parameters& params)
+quote_t getQuote(Parameters& params, std::string pair)
 {
   auto &exchange = queryHandle(params);
-  unique_json root { exchange.getRequest("/api/ticker") };
+  unique_json root { exchange.getRequest("/api/v2/ticker/"+ pair) };
 
   const char *quote = json_string_value(json_object_get(root.get(), "bid"));
   auto bidValue = quote ? atof(quote) : 0.0;
@@ -132,7 +132,7 @@ bool isOrderComplete(Parameters& params, std::string orderId)
 
 double getActivePos(Parameters& params, std::string currency) { return getAvail(params, currency); }
 
-double getLimitPrice(Parameters& params, double volume, bool isBid)
+double getLimitPrice(Parameters& params, double volume, bool isBid, std::string pair)
 {
   auto &exchange = queryHandle(params);
   unique_json root { exchange.getRequest("/api/order_book") };
@@ -140,7 +140,7 @@ double getLimitPrice(Parameters& params, double volume, bool isBid)
 
   // loop on volume
   *params.logFile << "<Bitstamp> Looking for a limit price to fill "
-                  << std::setprecision(6) << fabs(volume) << " BTC...\n";
+                  << std::setprecision(6) << fabs(volume) << " " << pair " ...\n";
   double tmpVol = 0.0;
   double p = 0.0;
   double v;

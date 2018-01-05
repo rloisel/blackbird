@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
   // Does some verifications about the parameters
   if (!params.demoMode) {
     if (!params.useFullExposure) {
-      if (params.testedExposure < 10.0 && params.leg2.compare("USD") == 0) {
+      if (params.testedExposure < 10.0 && (params.leg2.compare("USD") == 0) || params.leg2.compare("EUR") == 0)) {
         // TODO do the same check for other currencies. Is there a limi?
         std::cout << "ERROR: Minimum USD needed: $10.00" << std::endl;
         std::cout << "       Otherwise some exchanges will reject the orders\n" << std::endl;
@@ -85,9 +85,8 @@ int main(int argc, char** argv) {
     exit(EXIT_FAILURE);
   }
 
-  // We only trade BTC/USD for the moment
-  if (params.leg1.compare("BTC") != 0 || params.leg2.compare("USD") != 0) {
-    std::cout << "ERROR: Valid currency pair is only BTC/USD for now.\n" << std::endl;
+  if ((params.leg1.compare("BTC") != 0 || params.leg1.compare("ETH") != 0) || (params.leg2.compare("USD") != 0) || params.leg1.compare("EUR") != 0) {
+    std::cout << "ERROR: Valid currency pair are only BTC/USD | BTC/EUR | ETH/USD | ETH/EUR for now.\n" << std::endl;
     exit(EXIT_FAILURE);
   }
 
@@ -300,7 +299,7 @@ int main(int argc, char** argv) {
     logFile << "Demo mode: trades won't be generated\n" << std::endl;
   }
 
-  // Shows which pair we are trading (BTC/USD only for the moment)
+  // Shows which pair we are trading
   logFile << "Pair traded: " << params.leg1 << "/" << params.leg2 << "\n" << std::endl;
 
   std::cout << "Log file generated: " << logFileName << "\nBlackbird is running... (pid " << getpid() << ")\n" << std::endl;
@@ -336,13 +335,16 @@ int main(int argc, char** argv) {
   // This is only done when not in Demo mode.
   std::vector<Balance> balance(numExch);
   if (!params.demoMode)
+    std::string leg1Lower = std::transform(params.leg1.begin(), params.leg1.end(), params.leg1.begin(), ::tolower);
+    std::string leg2Lower = std::transform(params.leg2.begin(), params.leg2.end(), params.leg2.begin(), ::tolower);
+
     std::transform(getAvail, getAvail + numExch,
                    begin(balance),
                    [&params]( decltype(*getAvail) apply )
                    {
                      Balance tmp {};
-                     tmp.leg1 = apply(params, "btc");
-                     tmp.leg2 = apply(params, "usd");
+                     tmp.leg1 = apply(params, leg1Lower);
+                     tmp.leg2 = apply(params, leg2Lower);
                      return tmp;
                    } );
 
@@ -649,8 +651,11 @@ int main(int argc, char** argv) {
           shortOrderId = "0";
           inMarket = false;
           for (int i = 0; i < numExch; ++i) {
-            balance[i].leg2After = getAvail[i](params, "usd"); // FIXME: currency hard-coded
-            balance[i].leg1After = getAvail[i](params, "btc"); // FIXME: currency hard-coded
+            std::string leg1AfterLower = std::transform(params.leg1.begin(), params.leg1.end(), params.leg1.begin(), ::tolower);
+            std::string leg2AfterLower = std::transform(params.leg2.begin(), params.leg2.end(), params.leg2.begin(), ::tolower);
+
+            balance[i].leg2After = getAvail[i](params, leg2AfterLower);
+            balance[i].leg1After = getAvail[i](params, leg1AfterLower);
           }
           for (int i = 0; i < numExch; ++i) {
             logFile << "New balance on " << params.exchName[i] << ":  \t";

@@ -26,20 +26,39 @@ static RestApi& queryHandle(Parameters &params)
   return query;
 }
 
-quote_t getQuote(Parameters &params)
+std::string getMatchingPair(pair) {
+  if (pair.compare("btcusd") == 0) {
+    return "XXBTZUSD";
+  } else if (currency.compare("ethusd") == 0) {
+    return "ETHZUSD";
+  } else if (currency.compare("btceur") == 0) {
+    return "XXBTEUR";
+  } else if (currency.compare("etheur") == 0) {
+    return "ETHEUR";
+  } else {
+    return "";
+  }
+}
+
+quote_t getQuote(Parameters &params, std::string pair)
 {
   if (krakenGotTicker) {
     krakenGotTicker = false;
   } else {
+    std::string matchingPair = getMatchingPair(pair);
+    if (matchingPair.compare("") == 0) {
+      *params.logFile << "<Kraken> Pair not supported" << std::endl;
+      return "0";
+    }
     auto &exchange = queryHandle(params);
-    krakenTicker.reset(exchange.getRequest("/0/public/Ticker?pair=XXBTZUSD"));
+    krakenTicker.reset(exchange.getRequest("/0/public/Ticker?pair="+ matchingPair));
     krakenGotTicker = true;
   }
   json_t *root = krakenTicker.get();
-  const char *quote = json_string_value(json_array_get(json_object_get(json_object_get(json_object_get(root, "result"), "XXBTZUSD"), "b"), 0));
+  const char *quote = json_string_value(json_array_get(json_object_get(json_object_get(json_object_get(root, "result"), matchingPair), "b"), 0));
   auto bidValue = quote ? std::stod(quote) : 0.0;
 
-  quote = json_string_value(json_array_get(json_object_get(json_object_get(json_object_get(root, "result"), "XXBTZUSD"), "a"), 0));
+  quote = json_string_value(json_array_get(json_object_get(json_object_get(json_object_get(root, "result"), matchingPair), "a"), 0));
   auto askValue = quote ? std::stod(quote) : 0.0;
 
   return std::make_pair(bidValue, askValue);
@@ -58,21 +77,35 @@ double getAvail(Parameters& params, std::string currency) {
   } else if (currency.compare("btc") == 0) {
     const char * avail_str = json_string_value(json_object_get(result, "XXBT"));
     available = avail_str ? atof(avail_str) : 0.0;
+  } else if (currency.compare("eur") == 0) {
+    const char * avail_str = json_string_value(json_object_get(result, "EUR"));
+    available = avail_str ? atof(avail_str) : 0.0;
+  } else if (currency.compare("eth") == 0) {
+    const char * avail_str = json_string_value(json_object_get(result, "ETH"));
+    available = avail_str ? atof(avail_str) : 0.0;
+  } else if (currency.compare("xrp") == 0) {
+    const char * avail_str = json_string_value(json_object_get(result, "XXRP"));
+    available = avail_str ? atof(avail_str) : 0.0;
   } else {
     *params.logFile << "<Kraken> Currency not supported" << std::endl;
   }
   return available;
 }
 
-std::string sendLongOrder(Parameters& params, std::string direction, double quantity, double price) {
+std::string sendLongOrder(Parameters& params, std::string direction, double quantity, double price, std::string pair) {
   if (direction.compare("buy") != 0 && direction.compare("sell") != 0) {
     *params.logFile  << "<Kraken> Error: Neither \"buy\" nor \"sell\" selected" << std::endl;
+    return "0";
+  }
+  std::string matchingPair = getMatchingPair(pair);
+  if (matchingPair.compare("") == 0) {
+    *params.logFile << "<Kraken> Pair not supported" << std::endl;
     return "0";
   }
   *params.logFile << "<Kraken> Trying to send a \"" << direction << "\" limit order: "
                   << std::setprecision(6) << quantity << " @ $"
                   << std::setprecision(2) << price << "...\n";
-  std::string pair = "XXBTZUSD";
+  std::string pair = matchingPair;
   std::string type = direction;
   std::string ordertype = "limit";
   std::string pricelimit = std::to_string(price);
@@ -116,16 +149,21 @@ double getActivePos(Parameters& params) {
   return getAvail(params, "btc");
 }
 
-double getLimitPrice(Parameters &params, double volume, bool isBid)
+double getLimitPrice(Parameters &params, double volume, bool isBid, std::string pair)
 {
+  std::string matchingPair = getMatchingPair(pair);
+  if (matchingPair.compare("") == 0) {
+    *params.logFile << "<Kraken> Pair not supported" << std::endl;
+    return "0";
+  }
   if (!krakenGotLimPrice)
   {
     auto &exchange = queryHandle(params);
-    krakenLimPrice.reset(exchange.getRequest("/0/public/Depth?pair=XXBTZUSD"));
+    krakenLimPrice.reset(exchange.getRequest("/0/public/Depth?pair="+ matchingPair));
   }
   krakenGotLimPrice = !krakenGotLimPrice;
   auto root = krakenLimPrice.get();
-  auto branch = json_object_get(json_object_get(root, "result"), "XXBTZUSD");
+  auto branch = json_object_get(json_object_get(root, "result"), matchingPair);
   branch = json_object_get(branch, isBid ? "bids" : "asks");
 
   // loop on volume
